@@ -1,0 +1,390 @@
+---
+title: "Data Mining And Visualization AOL"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+knitr::opts_chunk\$set(echo = TRUE)
+
+**Group Member :**
+
+-   Brandon Ritchie Yang - 2602075491
+
+-   Landry Aidan Liauw - 2602081815
+
+-   Yosep Krisna Sugiharto - 2602074450
+
+This AOL Data Mining And Visualization notebook focuses on analyzing the performance of students in high school exams through exploratory data analysis (EDA).
+The dataset used for this analysis includes information about the marks secured by students in various subjects, such as math, reading, and writing.
+The dataset specifically targets students from the United States.
+
+The variables considered in the dataset are as follows:
+
+Gender: Indicates the gender of the student (male or female).
+
+Race/Ethnicity: Represents the race or ethnicity to which the student belongs.
+
+Parental Level of Education: Describes the educational background of the student's parents.
+
+Lunch: Specifies the type of lunch the student receives (standard or free/reduced).
+
+Test Preparation Course: Indicates whether the student completed a test preparation course.
+
+Math Score: Represents the score obtained by the student in the math exam.
+
+Reading Score: Represents the score obtained by the student in the reading exam.
+
+Writing Score: Represents the score obtained by the student in the writing exam.
+
+**------------------ DATA PROCESSING ! ------------------**
+
+**All Library Needed**
+
+```{r}
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(jtools)
+```
+
+**Making csv Readed as ( df ) variable**
+
+```{r}
+df <- read.csv("StudentsPerformance.csv")
+```
+
+**Knowing Inside Of Dataset !**
+
+```{r}
+dim(df)
+names(df)
+```
+
+```{r}
+head(df,10)
+```
+
+**Check for null values in the dataset**
+
+```{r}
+null_counts <- colSums(is.na(df))
+print(null_counts)
+```
+                                                                                               
+**Gender vs Test Grades**                                                                                                                                         
+In this section, we will investigate the relationship between gender and test grades among students.                                                           
+We will explore the following aspects:                                                                            
+
+Count of Male and Female Students: We will determine and present the total number of male and female students in the dataset. This analysis will provide an overview of the gender composition and enable us to understand the relative proportions of male and female students.                                                                
+
+Subject-Specific Performance: We will examine the test grades separately for male and female students in math, reading, and writing. We aim to identify any subjects in which one gender tends to outperform the other. For instance, we will explore whether male students generally excel in math while female students excel in reading or writing, or if the pattern is reversed. 
+
+ Distribution of Grades: We will visualize the distribution of test grades for each gender using histograms or box plots. This visualization will help us understand the spread of scores and identify any variations in the distribution patterns between male and female students. We will analyze differences in the range, median, and the presence of outliers in the grade distributions. 
+ 
+ Performance Disparities: We will investigate potential disparities or gaps in performance between male and female students across different score ranges. Our analysis will examine whether one gender consistently outperforms the other or if the performance differences are more nuanced and context-specific. 
+ 
+ 
+**Helper Function**
+
+```{r}
+# Creating A Total Score Column 
+df$total_score <- (df$math.score + df$reading.score + df$writing.score) / 3
+
+# Create a new column 'letter_grade' based on 'total_score'
+df$grade <- cut(df$total_score, breaks = c(0, 59, 69, 79, 89, 100),
+                       labels = c("F", "D", "C", "B", "A"), include.lowest = TRUE)
+
+ndata<-mutate(df,mean=(`math.score`+`reading.score`+`writing.score`)/3)
+```
+
+**Gender Distribution**
+```{r}
+# Count the number of occurrences for each gender
+gender_counts <- table(df$gender)
+
+# Create a data frame with gender, count, and percentage
+gender_data <- data.frame(gender = names(gender_counts),
+                          count = as.numeric(gender_counts))
+
+# Calculate the percentage
+gender_data$percentage <- prop.table(gender_counts) * 100
+
+# Create the pie chart with percentages, counts, and labels
+pie_chart <- ggplot(gender_data, aes(x = "", y = count, fill = gender)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y", start = 0) +
+  labs(title = "Gender Distribution",
+       fill = "Gender") +
+  scale_fill_manual(values = c("female" = "#FF99CC", "male" = "#99CCFF"),
+                    labels = c("Female", "Male")) +
+  theme_void() +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        legend.position = "bottom",
+        legend.title = element_blank())
+
+# Add labels for percentage and count
+pie_chart <- pie_chart +
+  geom_text(aes(label = paste0(round(percentage), "%\n", count)), 
+            position = position_stack(vjust = 0.5),
+            color = "black",
+            size = 5)
+
+# Print the pie chart
+print(pie_chart)
+```
+
+**Grades by Gender**
+```{r}
+# Define color palette
+colors <- c("female" = "#FF99CC", "male" = "#99CCFF")
+
+# Create count plot
+df %>%
+  ggplot(aes(x = grade, fill = gender)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Letter Grade", y = "Count", title = "Count of Letter Grades by Gender") +
+  scale_fill_manual(values = colors, labels = c("Female", "Male")) +
+  theme_minimal()
+```
+**Score Distribution**
+```{r}
+library(ggplot2)
+
+# Define color palette
+colors <- c("female" = "#FF99CC", "male" = "#99CCFF")
+
+# Define the number of bins and tick marks
+num_bins <- 50
+tick_marks <- seq(0, 100, by = 5)
+
+# Combine male and female scores for each test
+combined_df <- rbind(
+  transform(df, test = "Math", gender = as.factor(gender), score = `math.score`),
+  transform(df, test = "Reading", gender = as.factor(gender), score = `reading.score`),
+  transform(df, test = "Writing", gender = as.factor(gender), score = `writing.score`)
+)
+
+# Set options for larger graph display
+options(repr.plot.width = 16, repr.plot.height = 12)
+
+# Create the combined histogram plot
+ggplot(data = combined_df, aes(x = score, fill = gender)) +
+  geom_histogram(bins = num_bins, position = "identity", alpha = 0.5) +
+  labs(title = "Score Distribution by Test and Gender", x = "Score", y = "Frequency") +
+  scale_fill_manual(values = colors) +
+  scale_x_continuous(breaks = tick_marks) +
+  facet_wrap(~ test, nrow = 3, ncol = 1, scales = "free_x") +
+  theme_minimal()
+
+```
+**Test Grades & Things That Affect Test Score**                                                                                                                                         
+In this section, we will investigate the relationship between Test Grades & Things That Affect Test Score.
+
+We will explore the following aspects:                                                                            
+
+Grouping & Averaging Score Each Group: In this analysis, we will explore how to group score data based on specific categories and calculate the average score for each group. This will help us gain deeper insights into performance differences among the various groups. By identifying and comparing the average scores within each group, we can observe if there are significant differences in performance across the groups. This analysis provides a better understanding of performance variability and enables us to identify groups that may require special attention to improve outcomes or seek effective strategies to enhance overall performance.                                                                
+
+Parental Level Education: We will examine the relationship between students' academic performance and the educational level of their parents. By grouping the data based on different levels of parental education, I aim to understand how parental education influences students' achievement.  
+
+Parental Level Education & Distribution of Grades: We will investigate the relationship between students' academic performance, the educational level of their parents, and the distribution of grades. By grouping the data based on different levels of parental education, I aim to understand how parental education relates to the distribution of grades among students. 
+ 
+Test Preparation: We will explore the relationship between students' test performance and their level of test preparation. By grouping the data based on the extent of test preparation, I aim to understand how test preparation practices impact students' test scores.
+
+Lunch Type & Score Result : We will examine the relationship between students' lunch type and their score results. By grouping the data based on the type of lunch students receive, such as whether they receive free or reduced-price lunches or Standard full price, I aim to understand how lunch type correlates with students' academic performance. 
+
+**Average Score of each group**
+
+```{r}
+ndata%>%
+group_by(race.ethnicity)%>%
+summarize(avg_score=round(sum(mean)/n(),1))%>%
+ggplot(aes(race.ethnicity,avg_score,fill=race.ethnicity))+geom_bar(stat='identity')+
+geom_text(aes(label = avg_score))+coord_flip()+labs(title='Average score of each group')+guides(fill=F)
+```
+
+**Parental Level of Education**
+```{r}
+df%>%group_by(race.ethnicity,parental.level.of.education)%>%summarize(count=n())%>%
+ggplot()+geom_col(aes(race.ethnicity,count,fill=parental.level.of.education),position='dodge')+scale_fill_manual(values = c("#4B0082", "#800080","#9932CC","#6A5ACD","#BA55D3","#EE82EE"))
+```
+
+
+**Education of Parent And The Mean of The Score**
+```{r}
+groupa<-ndata%>%filter(`race.ethnicity`=='group A')
+groupb<-ndata%>%filter(`race.ethnicity`=='group B')
+groupc<-ndata%>%filter(`race.ethnicity`=='group C')
+groupd<-ndata%>%filter(`race.ethnicity`=='group D')
+groupe<-ndata%>%filter(`race.ethnicity`=='group E')
+ggplot(groupa)+geom_boxplot(mapping=aes(x=reorder(`parental.level.of.education`,mean,median),mean))+
+  ggtitle('GROUP A')+xlab('parental level of education')+coord_flip()
+ggplot(groupb)+geom_boxplot(mapping=aes(x=reorder(`parental.level.of.education`,mean,median),mean))+
+  ggtitle('GROUP B')+xlab('parental level of education')+coord_flip()
+ggplot(groupc)+geom_boxplot(mapping=aes(x=reorder(`parental.level.of.education`,mean,median),mean))+
+  ggtitle('GROUP C')+xlab('parental level of education')+coord_flip()
+ggplot(groupd)+geom_boxplot(mapping=aes(x=reorder(`parental.level.of.education`,mean,median),mean))+
+  ggtitle('GROUP D')+xlab('parental level of education')+coord_flip()
+ggplot(groupe)+geom_boxplot(mapping=aes(x=reorder(`parental.level.of.education`,mean,median),mean))+
+  ggtitle('GROUP E')+xlab('parental level of education')+coord_flip()
+```
+
+**Test Preparation Course And Mean Score**
+```{r}
+uncomplete_prep<-ndata%>%filter(`test.preparation.course`=='none')
+complete_prep<-ndata%>%filter(`test.preparation.course`=='completed')
+prep1<-ggplot()+geom_bar(uncomplete_prep,mapping = aes(x=mean,fill='uncompleted'))+
+  geom_bar(complete_prep,mapping=aes(x=mean,fill='completed'))
+prep2<-ggplot()+geom_boxplot(ndata,mapping=aes(`test.preparation.course`,mean))
+prep1
+prep2
+```
+
+**Test Preparation Course And Mean Score**
+```{r}
+# Box plot for Math Score by Lunch
+ggplot(df, aes(x = lunch, y = `math.score`, fill = lunch)) +
+  geom_boxplot() +
+  xlab("Lunch") +
+  ylab("Math Score") +
+  ggtitle("Box Plot: Math Score by Lunch") +
+  scale_fill_brewer(palette = "Set2")
+
+# Box plot for Reading Score by Lunch
+ggplot(df, aes(x = lunch, y = `reading.score`, fill = lunch)) +
+  geom_boxplot() +
+  xlab("Lunch") +
+  ylab("Reading Score") +
+  ggtitle("Box Plot: Reading Score by Lunch") +
+  scale_fill_brewer(palette = "Set2")
+
+# Box plot for Writing Score by Lunch
+ggplot(df, aes(x = lunch, y = `writing.score`, fill = lunch)) +
+  geom_boxplot() +
+  xlab("Lunch") +
+  ylab("Writing Score") +
+  ggtitle("Box Plot: Writing Score by Lunch") +
+  scale_fill_brewer(palette = "Set2")
+```
+
+**Insights:**
+
+1.   Parental Education: Parental education level appears to have a significant impact on students' test scores. Students whose parents hold higher levels of education tend to perform better academically. This finding emphasizes the crucial role of parental education in shaping students' academic outcomes.
+
+2.    Test Preparation Course: Students who have completed a test preparation course tend to achieve higher scores compared to those who haven't. This suggests that dedicated preparation efforts positively influence students' performance, highlighting the importance of providing access to test preparation resources and strategies.
+
+3.    Lunch Type: The type of lunch students receive is associated with their test scores. Students who receive free or reduced-price lunches tend to have lower average scores compared to those who pay full price. This correlation may be indicative of socioeconomic factors impacting students' overall academic performance.
+
+4.    Gender Differences: Gender differences are observable in test scores. While the dataset does not provide explicit details, further analysis could explore if certain subjects exhibit consistent gender disparities in performance.
+
+5.    Subject Performance: Variances in performance across different subjects are evident. Some students excel in specific subjects, indicating individual strengths and weaknesses that may require targeted support or intervention.
+
+6.    Relationships Between Variables: Exploring correlations between variables such as parental education, test preparation, lunch type, and test scores can provide a more comprehensive understanding of the interconnected factors influencing students' academic performance.
+
+```{r}
+# Convert categorical columns to factors
+df$gender <- as.factor(df$gender)
+df$race.ethnicity <- as.factor(df$race.ethnicity)
+df$parental.level.of.education <- as.factor(df$parental.level.of.education)
+df$lunch <- as.factor(df$lunch)
+df$test.preparation.course<- as.factor(df$test.preparation.course)
+
+# Calculate correlation between math score and other categorical columns
+cor_math_gender <- cor(df$`math.score`, as.numeric(df$gender))
+cor_math_race <- cor(df$`math.score`, as.numeric(df$`race.ethnicity`))
+cor_math_parental <- cor(df$`math.score`, as.numeric(df$`parental.level.of.education`))
+cor_math_lunch <- cor(df$`math.score`, as.numeric(df$lunch))
+cor_math_prep_course <- cor(df$`math.score`, as.numeric(df$`test.preparation.course`))
+
+# Print the correlation values
+cat("Math Score-Gender Correlation Value = ")
+cor_math_gender
+cat("Math Score-Race Correlation Value = ")
+cor_math_race
+cat("Math Score- Parental Correlation Value = ")
+cor_math_parental
+cat("Math Score- lunch Correlation Value = ")
+cor_math_lunch
+cat("Math Score-preparation Correlation Value = ")
+cor_math_prep_course
+
+# Create a data frame with the correlation values
+cor_data <- data.frame(
+  Variable = c("Gender", "Race/Ethnicity", "Parental Education", "Lunch", "Test Preparation"),
+  Correlation = c(cor_math_gender, cor_math_race, cor_math_parental, cor_math_lunch, cor_math_prep_course)
+)
+
+# Create the bar plot
+plot <- ggplot(cor_data, aes(x = Variable, y = Correlation)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Categorical Variables", y = "Correlation") +
+  ggtitle("Correlation between Math Score and Categorical Variables")
+
+# Display the plot
+print(plot)
+
+```
+
+
+```{r}
+# predictive modeling linear regression
+# predict writing score using reading score
+
+library(ggplot2)
+
+model <- lm(`writing.score` ~ `reading.score`, data = df)
+summary(model)
+new <- data.frame(`reading.score`=c(50))
+predict(model, newdata=new)
+
+```   
+```{r}
+effect_plot(model, pred = `reading.score`)
+```
+
+```{r}
+# predict math score using gender, lunch and race&ethnicity
+
+model_2 <- lm(`math.score` ~ gender + lunch + race.ethnicity, data = df)
+summary(model_2)
+new <- data.frame(gender=c("female"), lunch=c("standard"), race.ethnicity=c("group E"))
+predict(model_2, newdata=new)
+```
+
+```{r}
+effect_plot(model_2, pred = `lunch`)
+effect_plot(model_2, pred = gender)
+effect_plot(model_2, pred = race.ethnicity)
+```
+
+
+```{r}
+model_3 <- lm(`reading.score` ~ gender + lunch + race.ethnicity, data = df)
+summary(model_3)
+new <- data.frame(gender=c("female"), lunch=c("free/reduced"), race.ethnicity=c("group A"))
+predict(model_3, newdata=new)
+```
+
+```{r}
+effect_plot(model_3, pred = `lunch`)
+effect_plot(model_3, pred = gender)
+effect_plot(model_3, pred = race.ethnicity)
+```
+
+
+```{r}
+model_4 <- lm(`writing.score` ~ gender + lunch + race.ethnicity, data = df)
+summary(model_4)
+new <- data.frame(gender=c("male"), lunch=c("standard"), race.ethnicity=c("group D"))
+predict(model_4, newdata=new)
+```
+```{r}
+effect_plot(model_4, pred = `lunch`)
+effect_plot(model_4, pred = gender)
+effect_plot(model_4, pred = race.ethnicity)
+```
+
